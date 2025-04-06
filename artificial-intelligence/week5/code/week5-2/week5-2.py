@@ -1,94 +1,92 @@
 import heapq
 import time
 
-# Constants for the puzzle
-N = 4
-GOAL = tuple(range(1, N * N)) + (0,)
+def heuristic(state):
+    def manhattan_distance(state):
+        distance = 0
+        for i in range(4):
+            for j in range(4):
+                tile = state[i * 4 + j]
+                if tile == 0: continue
+                target_i, target_j = divmod(tile - 1, 4)
+                distance += abs(i - target_i) + abs(j - target_j)
+        return distance
 
-def manhattan(state):
-    total = 0
-    for i, tile in enumerate(state):
-        if tile:
-            target_row, target_col = divmod(tile - 1, N)
-            current_row, current_col = divmod(i, N)
-            total += abs(target_row - current_row) + abs(target_col - current_col)
-    return total
+    def linear_conflict(state):
+        conflict = 0
+        for i in range(4):
+            for j in range(4):
+                x = state[i * 4 + j]
+                if x == 0: continue
+                target_i, target_j = divmod(x - 1, 4)
+                if target_i == i and j < target_j:
+                    conflict += 2
+        return conflict
 
-def neighbors(state):
-    # Generate neighbor states with moves: up, down, left, right.
-    i = state.index(0)
-    row, col = divmod(i, N)
-    for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
-        new_row, new_col = row + dr, col + dc
-        if 0 <= new_row < N and 0 <= new_col < N:
-            j = new_row * N + new_col
+    return manhattan_distance(state) * 2 + linear_conflict(state)
+
+def get_neighbors(state):
+    # Find blank (0) position and generate moves
+    zero_index = state.index(0)
+    i, j = divmod(zero_index, 4)
+    neighbors = []
+    for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        new_i, new_j = i + di, j + dj
+        if 0 <= new_i < 4 and 0 <= new_j < 4:
+            new_index = new_i * 4 + new_j
             new_state = list(state)
-            new_state[i], new_state[j] = new_state[j], new_state[i]
-            yield tuple(new_state)
+            new_state[zero_index], new_state[new_index] = new_state[new_index], new_state[zero_index]
+            neighbors.append(tuple(new_state))
+    return neighbors
+
+def reconstruct_path(came_from, current):
+    path = [current]
+    while current in came_from:
+        current = came_from[current]
+        path.append(current)
+    return path[::-1]
+
+def goal_state():
+    # Goal state: tiles 1-15 and blank as 0
+    return tuple(range(1, 16)) + (0,)
 
 def a_star(start):
-    # Standard A* algorithm.
-    open_set = [(manhattan(start), 0, start, [])]
-    visited = {start: 0}
+    open_set = []
+    heapq.heappush(open_set, (heuristic(start), 0, start))
+    came_from = {}
+    g_score = {start: 0}
+    visited = set()
+
     while open_set:
-        est, cost, state, path = heapq.heappop(open_set)
-        if state == GOAL:
-            return path
-        for nxt in neighbors(state):
-            new_cost = cost + 1
-            if nxt not in visited or new_cost < visited[nxt]:
-                visited[nxt] = new_cost
-                priority = new_cost + manhattan(nxt)
-                heapq.heappush(open_set, (priority, new_cost, nxt, path + [nxt]))
+        _, current_cost, current = heapq.heappop(open_set)
+        if current == goal_state():
+            return reconstruct_path(came_from, current)
+        if current in visited:
+            continue
+        visited.add(current)
+        for neighbor in get_neighbors(current):
+            tentative_g = current_cost + 1
+            if tentative_g < g_score.get(neighbor, float('inf')):
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g
+                f_score = tentative_g + heuristic(neighbor)
+                heapq.heappush(open_set, (f_score, tentative_g, neighbor))
     return None
 
-def ida_star(start):
-    # IDA* search: iterative deepening over DFS.
-    threshold = manhattan(start)
-    path = [start]
-    def search(g, threshold, state, path):
-        f = g + manhattan(state)
-        if f > threshold:
-            return f
-        if state == GOAL:
-            return "FOUND"
-        min_threshold = float('inf')
-        for nxt in neighbors(state):
-            if nxt in path: continue
-            path.append(nxt)
-            temp = search(g+1, threshold, nxt, path)
-            if temp == "FOUND":
-                return "FOUND"
-            if temp < min_threshold:
-                min_threshold = temp
-            path.pop()
-        return min_threshold
-    while True:
-        temp = search(0, threshold, start, path)
-        if temp == "FOUND":
-            return path[1:]  # excluding initial state if desired
-        if temp == float('inf'):
-            return None
-        threshold = temp
+def main():
+    start = (1, 2, 3, 4,
+             5, 6, 7, 8,
+             9, 10, 11, 12,
+             13, 15, 14, 0)
+    print("Initial state:")
+    t0 = time.time()
+    path = a_star(start)
+    t1 = time.time()
+    if path is None:
+        print("No solution found.")
+    else:
+        print("Solution found in", len(path)-1, "moves")
+        print("Elapsed time:", t1 - t0, "seconds")
 
-
-start = [
-    ( 1, 2, 4, 8, 5, 7, 11, 10, 13, 15, 0, 3, 14, 6, 9, 12 ),
-    ( 14, 10, 6, 0, 4, 9, 1, 8, 2, 3, 5, 11, 12, 13, 7, 15 ),
-    ( 5, 1, 3, 4, 2, 7, 8, 12, 9, 6, 11, 15, 0, 13, 10, 14 ),
-    ( 6, 10, 3, 15, 14, 8, 7, 11, 5, 1, 0, 2, 13, 12, 9, 4 ),
-    ( 11, 3, 1, 7, 4, 6, 8, 2, 15, 9, 10, 13, 14, 12, 5, 0 ),
-    ( 0, 5, 15, 14, 7, 9, 6, 13, 1, 2, 12, 10, 8, 11, 4, 3 ),
-]
-
-for idx, puzzle in enumerate(start, 1):
-    print(f"Puzzle {idx}:")
-    for algo_name, algo in (("A*", a_star), ("IDA*", ida_star)):
-        t0 = time.perf_counter()
-        solution = algo(puzzle)
-        elapsed = time.perf_counter() - t0
-        if solution is not None:
-            print(f"  {algo_name} solved in {len(solution)} moves; Time: {elapsed:.6f} seconds")
-        else:
-            print(f"  {algo_name} found no solution; Time: {elapsed:.6f} seconds")
-    print()
+if __name__ == '__main__':
+    main()

@@ -1,7 +1,7 @@
-import random
 import math
-import time
+import random
 import sys
+import time
 
 # Parse .tsp file (TSPLIB format)
 def read_tsp(filename):
