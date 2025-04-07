@@ -1,92 +1,129 @@
-import heapq
-import time
+import heapq, time
 
-def heuristic(state):
+GOAL = ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0 )
+
+def heruistic(state):
     def manhattan_distance(state):
         distance = 0
         for i in range(4):
             for j in range(4):
-                tile = state[i * 4 + j]
-                if tile == 0: continue
-                target_i, target_j = divmod(tile - 1, 4)
-                distance += abs(i - target_i) + abs(j - target_j)
+                if state[i * 4 + j] == 0: continue
+                x, y = divmod(state[i * 4 + j] - 1, 4)
+                distance += abs(x - i) + abs(y - j)
         return distance
-
+    
     def linear_conflict(state):
         conflict = 0
         for i in range(4):
             for j in range(4):
-                x = state[i * 4 + j]
-                if x == 0: continue
-                target_i, target_j = divmod(x - 1, 4)
-                if target_i == i and j < target_j:
-                    conflict += 2
+                if state[i * 4 + j] == 0: continue
+                x, y = divmod(state[i * 4 + j] - 1, 4)
+                if i == x:
+                    for k in range(j + 1, 4):
+                        if state[i * 4 + k] == 0: continue
+                        xx, yy = divmod(state[i * 4 + k] - 1, 4)
+                        if xx == x and (y < yy) != (j < k):
+                            conflict += 2
+                if j == y:
+                    for k in range(i + 1, 4):
+                        if state[k * 4 + j] == 0: continue
+                        xx, yy = divmod(state[k * 4 + j] - 1, 4)
+                        if yy == y and (x < xx) != (i < k):
+                            conflict += 2
         return conflict
 
-    return manhattan_distance(state) * 2 + linear_conflict(state)
-
-def get_neighbors(state):
-    # Find blank (0) position and generate moves
-    zero_index = state.index(0)
-    i, j = divmod(zero_index, 4)
-    neighbors = []
-    for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-        new_i, new_j = i + di, j + dj
-        if 0 <= new_i < 4 and 0 <= new_j < 4:
-            new_index = new_i * 4 + new_j
-            new_state = list(state)
-            new_state[zero_index], new_state[new_index] = new_state[new_index], new_state[zero_index]
-            neighbors.append(tuple(new_state))
-    return neighbors
-
-def reconstruct_path(came_from, current):
-    path = [current]
-    while current in came_from:
-        current = came_from[current]
-        path.append(current)
-    return path[::-1]
-
-def goal_state():
-    # Goal state: tiles 1-15 and blank as 0
-    return tuple(range(1, 16)) + (0,)
+    return manhattan_distance(state) + linear_conflict(state)
 
 def a_star(start):
-    open_set = []
-    heapq.heappush(open_set, (heuristic(start), 0, start))
-    came_from = {}
-    g_score = {start: 0}
-    visited = set()
+    node_count = 0
+    start_time = time.time()
 
-    while open_set:
-        _, current_cost, current = heapq.heappop(open_set)
-        if current == goal_state():
-            return reconstruct_path(came_from, current)
-        if current in visited:
+    start_x, start_y = divmod(start.index(0), 4)
+    dst, que, vst = { start: 0 }, [ ( heruistic(start), 0, start, start_x, start_y, "" ) ], set()
+    while que:
+        f, g, state, x, y, p = heapq.heappop(que)
+        if state == GOAL:
+            return g, p
+        
+        if state in vst:
             continue
-        visited.add(current)
-        for neighbor in get_neighbors(current):
-            tentative_g = current_cost + 1
-            if tentative_g < g_score.get(neighbor, float('inf')):
-                came_from[neighbor] = current
-                g_score[neighbor] = tentative_g
-                f_score = tentative_g + heuristic(neighbor)
-                heapq.heappush(open_set, (f_score, tentative_g, neighbor))
-    return None
+        vst.add(state)
 
-def main():
-    start = (1, 2, 3, 4,
-             5, 6, 7, 8,
-             9, 10, 11, 12,
-             13, 15, 14, 0)
-    print("Initial state:")
-    t0 = time.time()
-    path = a_star(start)
-    t1 = time.time()
-    if path is None:
-        print("No solution found.")
-    else:
-        print("Solution found in", len(path)-1, "moves")
-        print("Elapsed time:", t1 - t0, "seconds")
+        node_count += 1
+        if node_count % 1000000 == 0:
+            print(f"# Explored {node_count:09d} nodes, took {time.time() - start_time:03.6f} seconds.")
 
-if __name__ == '__main__':
-    main()
+        for dx, dy, dp in [ ( -1, 0, "U" ), ( 1, 0, "D" ), ( 0, -1, "L" ), ( 0, 1, "R" ) ]:
+            nx, ny, np = x + dx, y + dy, p + dp
+            if not (0 <= nx < 4 and 0 <= ny < 4):
+                continue
+            i, ni = x * 4 + y, nx * 4 + ny
+
+            new_state = list(state)
+            new_state[i], new_state[ni] = new_state[ni], new_state[i]
+            new_state = tuple(new_state)
+            new_g, new_h = g + 1, heruistic(new_state)
+            new_f = new_g + new_h
+
+            if new_state not in dst or new_g < dst[new_state]:
+                dst[new_state] = new_g
+                heapq.heappush(que, ( new_f, new_g, new_state, nx, ny, np ))
+    return -1, "NULL"
+
+def ida_star(start):
+    opposite = {"U": "D", "D": "U", "L": "R", "R": "L"}
+    blank_index = start.index(0)
+    start_x, start_y = divmod(blank_index, 4)
+
+    def dfs(state, g, threshold, x, y, path, last_move):
+        f = g + heruistic(state)
+        if f > threshold:
+            return f
+        if state == GOAL:
+            return (g, path)
+        minimum = float("inf")
+        for dx, dy, move in [(-1, 0, "U"), (1, 0, "D"), (0, -1, "L"), (0, 1, "R")]:
+            if last_move and move == opposite[last_move]:
+                continue  # avoid reversing the previous move
+            nx, ny = x + dx, y + dy
+            if not (0 <= nx < 4 and 0 <= ny < 4):
+                continue
+            i = x * 4 + y
+            ni = nx * 4 + ny
+            new_state = list(state)
+            new_state[i], new_state[ni] = new_state[ni], new_state[i]
+            new_state = tuple(new_state)
+            result = dfs(new_state, g + 1, threshold, nx, ny, path + move, move)
+            if isinstance(result, tuple):
+                return result  # found solution
+            if result < minimum:
+                minimum = result
+        return minimum
+
+    threshold = heruistic(start)
+    while True:
+        result = dfs(start, 0, threshold, start_x, start_y, "", None)
+        if isinstance(result, tuple):
+            return result  # returns (number_of_steps, solution_path)
+        if result == float("inf"):
+            return -1, "NULL"
+        threshold = result
+
+testcases = [
+    ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 0, 15 ),
+    ( 1, 2, 4, 8, 5, 7, 11, 10, 13, 15, 0, 3, 14, 6, 9, 12 ),
+    ( 14, 10, 6, 0, 4, 9, 1, 8, 2, 3, 5, 11, 12, 13, 7, 15 ),
+    ( 5, 1, 3, 4, 2, 7, 8, 12, 9, 6, 11, 15, 0, 13, 10, 14 ),
+    ( 6, 10, 3, 15, 14, 8, 7, 11, 5, 1, 0, 2, 13, 12, 9, 4 ),
+    ( 11, 3, 1, 7, 4, 6, 8, 2, 15, 9, 10, 13, 14, 12, 5, 0 ),
+    ( 0, 5, 15, 14, 7, 9, 6, 13, 1, 2, 12, 10, 8, 11, 4, 3 ),
+]
+
+for idx, state in enumerate(testcases):
+    print(f"Test case {idx}:")
+    for name, algo in [ ("A*", a_star), ("IDA*", ida_star) ]:
+        t0 = time.time()
+        len, moves = algo(state)
+        t1 = time.time()
+        print(f"{name} solved in {len} step(s), took {t1 - t0:.6f} second(s): {moves}")
+    print("-" * 40)
