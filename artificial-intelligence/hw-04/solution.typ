@@ -14,15 +14,15 @@ $ 1 stretch(->, size: #2em)^R 2 stretch(->, size: #2em)^U 5 stretch(->, size: #2
 
 - Step 1:
 
-$ Q_1(1, R) = (1 - alpha)Q_1(1, R) + alpha(r + gamma dot max Q(2, alpha')) = 3.48 $
+  $ Q_1(1, R) = (1 - alpha)Q_1(1, R) + alpha(r + gamma dot max Q(2, alpha')) = 3.48 $
 
 - Step 2:
 
-$ Q_1(2, U) = (1 - alpha)Q_1(2, U) + alpha(r + gamma dot max Q(5, alpha')) = 5.88 $
+  $ Q_1(2, U) = (1 - alpha)Q_1(2, U) + alpha(r + gamma dot max Q(5, alpha')) = 5.88 $
 
 - Step 3:
 
-$ Q_1(5, R) = (1 - alpha)Q_1(5, R) + alpha(r + gamma dot max Q(6, alpha')) = 8.4 $
+  $ Q_1(5, R) = (1 - alpha)Q_1(5, R) + alpha(r + gamma dot max Q(6, alpha')) = 8.4 $
 
 
 
@@ -59,26 +59,46 @@ $ Q_1(x, "Study") = 10 + 1 times 0 = 10 $
 
 == (a)
 
-_Solution._ Assuming the initial values are all 0, we first calculate how the value of $s_1$ changes for each Markov Decision Process:
+_Solution._
 
 - For MDP 1:
 
-$ V_(n + 1)(s_1) &= 1/(1 + 1) times (0 + V_(n)(s_1)) + 1/(1 + 1) times (1 + V_(n)(s_2)) \
-  V_(n + 1)(s_2) &= 1/(1 + 1) times (0 + V_(n)(s_1)) + 1/(1 + 1) times (0 + V_(n)(s_2)) $
+  The best strategy is
 
-  Then we have $V_1(s_1) = 0.5, V_1(s_2) = 0$, and $V_(k)(s_1) - V_(k)(s_2) = 0.5$ for all $k > 0$. Hence
+  $ s_1 stretch(->, size: #2em)^(a_2) s_2 stretch(->, size: #2em)^(a_1) s_1 $
 
-$ V_(n + 1)(s_1) = V_(n)(s_1) + 0.25 $
-
-  for all $n > 0$. Therefore, we can make $V_(n)(s_1)$ reach infinity with MDP 1.
+  This will get us 1 point for every 2 steps.
 
 - For MDP 2:
 
-$ V_(n + 1)(s_1) &= 1/(1 + 1) times (0 + V_(n)(s_1)) + 1/(1 + 1) times (0 + V_(n)(s_2)) \
-  V_(n + 1)(s_2) &= 1/(1 + 1) times (1 + V_(n)(s_1)) + 1/(1 + 1) times (1 + V_(n)(s_2)) $
+  The best strategy is
 
-  Then we have $V_1(s_1) = 0, V_1(s_2) = 1$, and $V_(k)(s_1) - V_(k)(s_2) = -1$ for all $k > 0$. Hence
+  $ s_1 stretch(->, size: #2em)^(a_2) s_2 stretch(->, size: #2em)^(a_2) s_2 ("loop") $
 
-$ V_(n + 1)(s_1) = V_(n)(s_1) + 0.5 $
+  This will get us 1 point for every step after the first step.
 
-  for all $n > 0$. Therefore, we can make $V_(n)(s_1)$ reach infinity with MDP 2.
+- For MDP 3:
+
+  The best strategy is
+
+  $ s_1 stretch(->, size: #2em)^(a_1) s_1 ("loop") $
+
+  This will get us 1 point for every step.
+
+Therefore, all three MDPs have an optimal strategy that can make $V(s_1)$ infinite.
+
+== (b)
+
+Since the $R$ function is irrelevalt to the value of $gamma$, the optimal strategy for all three MDPs is the same as in (a).
+
+- For MDP 1:
+
+  $ lim_(n -> oo) V_(n)(s_1) = sum_(k = 1)^(oo) gamma^(2k) = gamma^2/(1 - gamma^2) $
+
+- For MDP 2:
+
+  $ lim_(n -> oo) V_(n)(s_1) = sum_(k = 2)^(oo) gamma^(k) = gamma^2/(1 - gamma) $
+
+- For MDP 3:
+
+  $ lim_(n -> oo) V_(n)(s_1) = sum_(k = 1)^(oo) gamma^(k) = gamma/(1 - gamma) $
