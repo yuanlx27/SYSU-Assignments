@@ -1,5 +1,3 @@
-
-
 #let report(
   title: "标题",
   subtitle: "副标题",
@@ -44,11 +42,12 @@
   #pagebreak()
 
   #set text(
+    font: ( "Noto Sans CJK SC" ),
     lang: "zh",
-    font: "Noto Sans CJK SC"
   )
 
   #show link: set text(fill: blue)
+  #show raw: set text(font: "Noto Sans Mono")
 
   #body
 ]
