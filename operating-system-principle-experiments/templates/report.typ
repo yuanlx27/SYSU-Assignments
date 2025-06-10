@@ -41,6 +41,9 @@
 
   #pagebreak()
 
+  #set page(
+    numbering: "1",
+  )
   #set text(
     font: ( "Noto Sans CJK SC" ),
     lang: "zh",
